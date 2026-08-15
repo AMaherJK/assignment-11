@@ -37,7 +37,7 @@ let apodData = null;
 let launchesData = [];
 let planetsData = [];
 
-const NASA_API_KEY=${{secrets.NASA_API_KEY}};
+const NASA_API_KEY="Ir83KniWqUreR6gnfHzoKsChF7rZBnXejmAk9oDb"
 const NASA_API_URL = `https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`;
 
 const apodLoading = document.getElementById("apod-loading");
