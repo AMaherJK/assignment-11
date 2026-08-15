@@ -1,5 +1,15 @@
 const sections = document.querySelectorAll(".app-section");
 const navLinks = document.querySelectorAll(".nav-link");
+const planetColors = {
+    Mercury: "#eab308",
+    Venus: "#f97316",
+    Earth: "#3b82f6",
+    Mars: "#ef4444",
+    Jupiter: "#fb923c",
+    Saturn: "#facc15",
+    Uranus: "#06b6d4",
+    Neptune: "#2563eb",
+};
 function showSection(sectionId) {
     for (let i = 0; i < sections.length; i++) {
         sections[i].classList.add("hidden")
@@ -26,6 +36,8 @@ showSection("today-in-space");
 let apodData = null;
 let launchesData = [];
 let planetsData = [];
+
+const NASA_API_KEY=${{ secrets.NASA_API_KEY }};
 const NASA_API_URL = `https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`;
 
 const apodLoading = document.getElementById("apod-loading");
@@ -263,41 +275,20 @@ async function getPlanets() {
     }
     const data = await response.json();
     planetsData = data.bodies;
-    console.log(planetsData)
     displayPlanetCards();
+    displayComparisonTable()
 }
 function displayPlanetCards() {
     const planetsGrid = document.getElementById("planets-grid");
-    planetsGrid.innerHTML = "";
+    const planetsCards = document.getElementById("planets-grid").children
     planetsData.forEach(planet => {
-        const card = document.createElement("div");
-
-        card.className =
-            "planet-card bg-slate-800/50 border border-slate-700 rounded-2xl p-4 transition-all cursor-pointer group";
-
-        card.dataset.planetId = planet.id;
-
-        card.innerHTML = `
-            <div class="relative mb-3 h-24 flex items-center justify-center">
-                <img
-                    class="w-20 h-20 object-contain group-hover:scale-110 transition-transform"
-                    src="${planet.image}"
-                    alt="${planet.englishName}"
-                />
-            </div>
-
-            <h4 class="font-semibold text-center text-sm">
-                ${planet.englishName}
-            </h4>
-
-            <p class="text-xs text-slate-400 text-center">
-                ${formatAU(planet.semimajorAxis)} AU
-            </p>
-        `;
-        card.addEventListener("click", () => {
-            displayPlanetDetails(planet);
-        });
-        planetsGrid.appendChild(card);
+        for (var i = 0; i < planetsCards.length; i++) {
+            if (planet.englishName.toLowerCase() == planetsCards[i].getAttribute("data-planet-id")) {
+                planetsCards[i].addEventListener("click", () => {
+                    displayPlanetDetails(planet);
+                });
+            }
+        }
     });
 }
 
@@ -376,41 +367,23 @@ function displayPlanetDetails(planet) {
 }
 function displayPlanetFacts(planet) {
     const factsContainer = document.getElementById("planet-facts");
-
     const facts = [];
-
-    if (planet.type) {
-        facts.push(`Classified as a ${planet.type}`);
-    }
-
+    facts.push(`Classified as a ${planet.type}`);
     if (planet.moons) {
-        facts.push(
-            `Has ${planet.moons.length} known moon${planet.moons.length !== 1 ? "s" : ""}`
-        );
+        facts.push(`Has ${planet.moons.length} known moon${planet.moons.length > 1 ? "s" : ""}`);
     } else {
         facts.push("Has no known moons");
     }
-
-    facts.push(
-        `Average temperature is ${formatTemperature(planet.avgTemp)}`
-    );
-
-    facts.push(
-        `Axial tilt is ${planet.axialTilt}°`
-    );
-
+    facts.push(`Average temperature is ${formatTemperature(planet.avgTemp)}`);
+    facts.push(`Axial tilt is ${planet.axialTilt}°`);
     factsContainer.innerHTML = "";
-
     facts.forEach(fact => {
         const li = document.createElement("li");
-
         li.className = "flex items-start";
-
         li.innerHTML = `
             <i class="fas fa-check text-green-400 mt-1 mr-2"></i>
             <span class="text-slate-300">${fact}</span>
         `;
-
         factsContainer.appendChild(li);
     });
 }
@@ -435,7 +408,7 @@ function approxNumber(number) {
     return Math.ceil(number);
 } //approx number
 function formatAU(distanceKm) {
-    const AU = planetsData[6].semimajorAxis; //earth semi major axis
+    const AU = 149598023; //earth semi major axis
 
     return (distanceKm / AU).toFixed(2);
 } //divides the planets semi major axis by earth's
@@ -446,4 +419,81 @@ function formatTemperature(kelvin) {
     const celsius = kelvin - 273.15;
 
     return `${Math.round(celsius)}°C`;
+}
+function displayComparisonTable() {
+    const tbody = document.getElementById("planet-comparison-tbody");
+    tbody.innerHTML = "";
+    const planets = planetsData
+    planets.sort((a, b) => a.semimajorAxis - b.semimajorAxis);
+    planets.forEach(planet => {
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-800/30 transition-colors";
+        const color = planetColors[planet.englishName] || "#64748b";
+        const earthMass = 5.97237e24;
+        const planetMass = planet.mass.massValue * Math.pow(10, planet.mass.massExponent);
+        const massComparedToEarth = planetMass / earthMass;
+        row.innerHTML = `
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 sticky left-0 bg-slate-800 z-10"
+            >
+                <div class="flex items-center space-x-2 md:space-x-3">
+                    <div
+                        class="w-6 h-6 md:w-8 md:h-8 rounded-full flex-shrink-0"
+                        style="background-color: ${color}"
+                    ></div>
+
+                    <span
+                        class="font-semibold text-sm md:text-base whitespace-nowrap"
+                    >
+                        ${planet.englishName}
+                    </span>
+                </div>
+            </td>
+
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap"
+            >
+                ${formatAU(planet.semimajorAxis)}
+            </td>
+
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap"
+            >
+                ${approxNumber(planet.meanRadius * 2)}
+            </td>
+
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap"
+            >
+                ${massComparedToEarth.toFixed(3)}
+            </td>
+
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap"
+            >
+                ${formatOrbitalPeriod(planet.sideralOrbit)}
+            </td>
+
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap"
+            >
+                ${planet.moons ? planet.moons.length : 0}
+            </td>
+
+            <td
+                class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap"
+            >
+                <span
+                    class="px-2 py-1 rounded text-xs"
+                    style="
+                        background-color: ${color}80;
+                        color: white;
+                    "
+                >
+                    ${planet.type || planet.bodyType}
+                </span>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
 }
